@@ -19,6 +19,7 @@ class Point(object):
 
 class Obstacle(object):
     def __init__(self, left, right, bottom, top):
+        """initialize rectangle obstacle with 2 points"""
         self.left = left
         self.right = right
         self.top = top
@@ -44,24 +45,30 @@ def main():
     #obstacles.append(Obstacle(10, 50, 70, 100))
     #obstacles.append(Obstacle(120, 130, 50, 100))
     
+    #draw obstacles
     for o in obstacles:
         plt.gca().add_patch(Rectangle((o.left, o.bottom), o.right - o.left, o.top - o.bottom, facecolor="red"))
     
-    numSteps = 10000 #number of points to add to the tree
-    width = 800 #width of the tree
-    height = 600 #height of the tree
+    numSteps = 5000 #number of points to add to the tree
+    width = 800     #width of the tree
+    height = 600    #height of the tree
     startPoint = Point(100, 50)
     points = np.zeros((numSteps,), dtype=np.object)
     points[0] = startPoint
     count = 1
     
-    while count < numSteps:
+    #loop until numSteps points added to tree (or tree is filled)
+    while count < numSteps and count < width * height:
         newPoint = Point(random.randint(0, width), random.randint(0, height))
         collision = False
+        
+        #reject point if point is inside obstacle
         for o in obstacles:
             collision = o.isCollision(newPoint)
             if collision:
                 break
+        
+        #if point not inside obstacle, find closest endpoint in tree to new point
         if not collision:
             dist = sqDist(newPoint, startPoint)
             closest = startPoint
@@ -78,9 +85,11 @@ def main():
                     dist = newDist
                     closest = points[i]
             
+            #draw line segments
             line = plt.Line2D((newPoint.x, closest.x), (newPoint.y, closest.y))
             plt.gca().add_line(line)
             
+            #add new point to list
             if found:
                 points[count] = newPoint
                 count += 1
