@@ -9,25 +9,42 @@ class quadNode(object):
 
     def addPoint(self, point):
         """Adds point to Quadtree, creating new nodes as needed."""
-        #check if point intersects bounding box
+        # check if point intersects bounding box
         if not self.area.intersectsPoint(point):
             return False
 
-        #check if node is at capacity and create children if it is
-        if len(self.pointList) >= self.NODE_CAPACITY:
-            offset = self.area.halfDim / 2
-            x = self.area.center[0]
-            y = self.area.center[1]
-            self.topLeft = quadNode((x - offset, y + offset), offset)
-            self.topRight = quadNode((x + offset, y + offset), offset)
-            self.bottomLeft = quadNode((x - offset, y - offset), offset)
-            self.bottomRight = quadNode((x + offset, y - offset), offset)
-            #resize
+        # if node has children, try to add point to children.
+        if self.topLeft != None:
+            self.addPointChildren(point)
+
+        # if space in node, add point to pointlist
+        if len(self.pointList) < self.NODE_CAPACITY:
+            self.pointList.append(point)
             return True
 
-        #otherwise add point to pointlist
-        self.pointList.append(point)
-        return True
+        # otherwise node is at capacity, create children and try to add point to children
+        offset = self.area.halfDim / 2
+        x = self.area.center[0]
+        y = self.area.center[1]
+        self.topLeft = quadNode((x - offset, y + offset), offset)
+        self.topRight = quadNode((x + offset, y + offset), offset)
+        self.bottomLeft = quadNode((x - offset, y - offset), offset)
+        self.bottomRight = quadNode((x + offset, y - offset), offset)
+
+        return self.addPointChildren(point)   # returns true if point added, false if point not added
+
+    def addPointChildren(self, point):
+        """Tries to add passed point to the node's child. Returns true if point added, false otherwise"""
+        if self.topLeft.addPoint(point):
+            return True
+        if self.topRight.addPoint(point):
+            return True
+        if self.bottomLeft.addPoint(point):
+            return True
+        if self.bottomRight.addPoint(point):
+            return True
+
+        return False
 
 
 class AABB(object):
