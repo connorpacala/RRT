@@ -2,34 +2,26 @@ from shapely.geometry import Point, LineString
 import matplotlib.pyplot as plt
 import random
 from itertools import islice
-import time
 import sys
-import math
-from sets import Set
+
 
 class RRT(object):
-    def __init__(self, startX, startY):
+    def __init__(self, startX, startY, gridW, gridH):
         """Initialize the grid and first two points in the RRT"""
-        width = 100
-        height = 100
         self.pointList = []
-        self.coordsSet = Set() #hashtable of already added points (greatly improves runtime)
-        
-        #initialize the matplotlib graph
-        fig = plt.figure()
-        self.ax = fig.add_subplot(111)
-        self.ax.set_xlim(-1, width + 1)
-        self.ax.set_ylim(-1, height + 1)
-        
-        #add the start point and the first connecting endpoint to the tree
-        startPoint = Endpoint(width / 2, height / 2, None)
+        self.coordsSet = set()  # hashtable of already added points (greatly improves runtime)
+
+        self.width = gridW
+        self.height = gridH
+
+        # add the start point and the first connecting endpoint to the tree
+        startPoint = Endpoint(self.width / 2, self.height / 2, None)
         self.pointList.append(startPoint)
         self.coordsSet.add((startPoint.splitCoords()))
-        newPoint = Endpoint(random.randint(0, width), random.randint(0, height), startPoint)
+        newPoint = Endpoint(random.randint(0, self.width), random.randint(0, self.height), startPoint)
         self.pointList.append(newPoint)
         self.coordsSet.add((newPoint.splitCoords()))
-        
-        
+
     def sqDist(self, pointA, pointB):
         """returns squared distance between points. Allows comparison of dist for two
         points without needing to use sqrt to calculate the actual distance.
@@ -45,8 +37,8 @@ class RRT(object):
         dist = self.sqDist(self.pointList[0].coords, point.coords)
         closestEnd = self.pointList[0]
         intersect = None
-        for p in islice(self.pointList, 1, None): #ignore first point as it has no prevPoint
-            #find the closest point on the line to the passed point
+        for p in islice(self.pointList, 1, None):   # ignore first point as it has no prevPoint
+            # find the closest point on the line to the passed point
             line = LineString([p.coords, p.prevPoint.coords])
             tempPoint = line.interpolate(line.project(point.coords))
             tempDist = self.sqDist(tempPoint, point.coords)
@@ -55,7 +47,7 @@ class RRT(object):
                 closestEnd = p
                 intersect = tempPoint
         
-        #if point found, add the new point to the list and update prevPoints of endpoints
+        # if point found, add the new point to the list and update prevPoints of endpoints
         if intersect:
             newIntersect = Endpoint(intersect.x, intersect.y, closestEnd.prevPoint)
             self.pointList.append(newIntersect)
@@ -71,47 +63,7 @@ class RRT(object):
                 
         return True
 
-    def drawPlot(self):
-        """draw the RRT"""
-        for p in islice(self.pointList, 1, None):
-            epA = p
-            epB = epA.prevPoint
-            line = LineString([epA.coords, epB.coords])
-        
-            x, y = line.xy
-            self.ax.plot(x, y, color="blue") 
-    
-        plt.show()
-        
-    def drawPath(self, targetPoint):
-        """draw the RRT with a path from the startPoint to the passed targetPoint"""
-        tempPoint = self.pointList[-1]
-        plottedPoints = []
-        #start at targetPoint and work backwards until starting point found.
-        while tempPoint.prevPoint != None:
-            plottedPoints.append(tempPoint)
-            epA = tempPoint
-            epB = epA.prevPoint
-            line = LineString([epA.coords, epB.coords])
-        
-            #draw each line in red
-            x, y = line.xy
-            self.ax.plot(x, y, color="red") 
-        
-            tempPoint = tempPoint.prevPoint
-            
-        for p in islice(self.pointList, 1, None):
-            if p not in plottedPoints:
-                epA = p
-                epB = epA.prevPoint
-                line = LineString([epA.coords, epB.coords])
-            
-                x, y = line.xy
-                self.ax.plot(x, y, color="blue") 
-    
-        plt.show()
-        
-    
+
 class Endpoint(object):
     def __init__(self, x, y, prevPoint):
         self.coords = Point(x, y)
@@ -121,13 +73,69 @@ class Endpoint(object):
         return self.coords.x, self.coords.y
 
 
+def drawPlot(rrt):
+    """draw the RRT"""
+
+    # initialize the matplotlib graph
+    fig = plt.figure()
+    rrt.ax = fig.add_subplot(111)
+    rrt.ax.set_xlim(-1, rrt.width + 1)
+    rrt.ax.set_ylim(-1, rrt.height + 1)
+
+    for p in islice(rrt.pointList, 1, None):
+        epA = p
+        epB = epA.prevPoint
+        line = LineString([epA.coords, epB.coords])
+
+        x, y = line.xy
+        rrt.ax.plot(x, y, color="blue")
+
+    plt.show()
+
+
+def drawPath(rrt, targetPoint):
+    """draw the RRT with a path from the startPoint to the passed targetPoint"""
+
+    # initialize the matplotlib graph
+    fig = plt.figure()
+    rrt.ax = fig.add_subplot(111)
+    rrt.ax.set_xlim(-1, rrt.width + 1)
+    rrt.ax.set_ylim(-1, rrt.height + 1)
+
+    tempPoint = rrt.pointList[-1]
+    plottedPoints = []
+    # start at targetPoint and work backwards until starting point found.
+    while tempPoint.prevPoint != None:
+        plottedPoints.append(tempPoint)
+        epA = tempPoint
+        epB = epA.prevPoint
+        line = LineString([epA.coords, epB.coords])
+
+        # draw each line in red
+        x, y = line.xy
+        rrt.ax.plot(x, y, color="red")
+
+        tempPoint = tempPoint.prevPoint
+
+    for p in islice(rrt.pointList, 1, None):
+        if p not in plottedPoints:
+            epA = p
+            epB = epA.prevPoint
+            line = LineString([epA.coords, epB.coords])
+
+            x, y = line.xy
+            rrt.ax.plot(x, y, color="blue")
+
+    plt.show()
+
+
 def main():
     random.seed()
-    rrt = RRT(50, 50)
     count = 0
     numSteps = int(sys.argv[1]) #BAD, ASSUMES VALUE PASSED
     width = 100
     height = 100
+    rrt = RRT(50, 50, width, height)
     targetPoint = Endpoint(80, 40, None)
     """
     startPoint = Endpoint(width / 2, height / 2, None)
@@ -147,7 +155,7 @@ def main():
             count += 1
         newPoint = Endpoint(random.randint(0, width), random.randint(0, height), None)
             
-    rrt.drawPath(targetPoint)
+    drawPath(rrt, targetPoint)
     
     
 if __name__ == "__main__":
