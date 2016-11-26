@@ -14,7 +14,7 @@ class quadNode(object):
             return False
 
         # if node has children, try to add point to children.
-        if self.topLeft != None:
+        if self.topLeft is not None:
             self.addPointChildren(point)
 
         # if space in node, add point to pointlist
@@ -58,6 +58,24 @@ class AABB(object):
         xbound = self.center[0] - self.halfDim < point[0] < self.center[0] + self.halfDim
         ybound = self.center[1] - self.halfDim < point[1] < self.center[1] + self.halfDim
         return xbound and ybound
+
+    def intersectsAABB(self, bb):
+        """checks if passed bounding box intersects with this bounding box. Returns true if there is an intersection"""
+        # bb left of bounding box (self)
+        if self.center[0] - self.halfDim > bb.center[0] + bb.halfDim:
+            return False
+        # bb right of bounding box (self)
+        if self.center[0] + self.halfDim < bb.center[0] - bb.halfDim:
+            return False
+        # bb below bounding box (self)
+        if self.center[1] - self.halfDim > bb.center[1] + bb.halfDim:
+            return False
+        # bb above bounding box (self)
+        if self.center[1] + self.halfDim > bb.center[1] - bb.halfDim:
+            return False
+
+        # if we get here, boxes intersect
+        return True
 
 
 class Quadtree(object):
