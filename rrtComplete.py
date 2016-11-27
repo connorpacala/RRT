@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import random
 from itertools import islice
 import sys
+import time
 
 
 class RRT(object):
@@ -97,10 +98,12 @@ def drawPath(rrt, targetPoint):
     """draw the RRT with a path from the startPoint to the passed targetPoint"""
 
     # initialize the matplotlib graph
+    plt.ion()
+
     fig = plt.figure()
-    rrt.ax = fig.add_subplot(111)
-    rrt.ax.set_xlim(-1, rrt.width + 1)
-    rrt.ax.set_ylim(-1, rrt.height + 1)
+    ax = fig.add_subplot(111)
+    ax.set_xlim(-1, rrt.width + 1)
+    ax.set_ylim(-1, rrt.height + 1)
 
     tempPoint = rrt.pointList[-1]
     plottedPoints = []
@@ -113,7 +116,7 @@ def drawPath(rrt, targetPoint):
 
         # draw each line in red
         x, y = line.xy
-        rrt.ax.plot(x, y, color="red")
+        ax.plot(x, y, color="red")
 
         tempPoint = tempPoint.prevPoint
 
@@ -124,9 +127,8 @@ def drawPath(rrt, targetPoint):
             line = LineString([epA.coords, epB.coords])
 
             x, y = line.xy
-            rrt.ax.plot(x, y, color="blue")
-
-    plt.show()
+            ax.plot(x, y, color="blue")
+            fig.canvas.draw()
 
 
 def main():
