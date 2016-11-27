@@ -99,6 +99,7 @@ def drawPath(rrt, targetPoint):
 
     # initialize the matplotlib graph
     plt.ion()
+    plt.show()
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -128,7 +129,8 @@ def drawPath(rrt, targetPoint):
 
             x, y = line.xy
             ax.plot(x, y, color="blue")
-            fig.canvas.draw()
+            plt.pause(0.001)
+            #fig.canvas.draw()
 
 
 def main():
