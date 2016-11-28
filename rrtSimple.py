@@ -11,6 +11,7 @@ import random
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import numpy as np
+import cProfile
 
 class Point(object):
     def __init__(self, x, y):
@@ -37,8 +38,8 @@ def sqDist(pointA, pointB):
 
 
 def main():
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111)
     #add obstacles to avoid
     obstacles = []
     #obstacles.append(Obstacle(50, 90, 20, 60))
@@ -86,18 +87,18 @@ def main():
                     closest = points[i]
             
             #draw line segments
-            line = plt.Line2D((newPoint.x, closest.x), (newPoint.y, closest.y))
-            plt.gca().add_line(line)
+            #line = plt.Line2D((newPoint.x, closest.x), (newPoint.y, closest.y))
+            #plt.gca().add_line(line)
             
             #add new point to list
             if found:
                 points[count] = newPoint
                 count += 1
         
-    ax.set_xlim(-1, width + 1)
-    ax.set_ylim(-1, height + 1)
+    #ax.set_xlim(-1, width + 1)
+    #ax.set_ylim(-1, height + 1)
 
-    plt.show()
+    #plt.show()
 
 if __name__ == "__main__":
-    main()
+    cProfile.run('main()')
