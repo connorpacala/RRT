@@ -112,7 +112,7 @@ def drawPlot(rrt):
 def drawPath(rrt, targetPoint):
     """draw the RRT with a path from the startPoint to the passed targetPoint"""
     searchArea = AABB((rrt.width / 2, rrt.height / 2), max(rrt.width, rrt.height) / 2)
-    pointList = rrt.quadTree.getPointsAABB(searchArea)
+    pointList = rrt.quadTree.getPointsAABB(searchArea)  # get all points in quadtree
 
     # initialize the matplotlib graph
     fig = plt.figure()

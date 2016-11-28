@@ -62,7 +62,7 @@ class quadNode(object):
     def getPointsAABB(self, AABB):
         """returns a list of all points in quadtree that are also in AABB"""
         if not self.area.intersectsAABB(AABB):  # two bounding boxes don't intersect. Return False
-            return None
+            return []
 
         points = self.pointList
         if self.topLeft is None:
@@ -71,7 +71,7 @@ class quadNode(object):
         # append any points from child nodes to points and return all points
         points.extend(self.topLeft.getPointsAABB(AABB))
         points.extend(self.topRight.getPointsAABB(AABB))
-        points.extend(self.bottomLeftLeft.getPointsAABB(AABB))
+        points.extend(self.bottomLeft.getPointsAABB(AABB))
         points.extend(self.bottomRight.getPointsAABB(AABB))
 
         return points
@@ -116,7 +116,7 @@ class AABB(object):
             return False
         if self.center[1] - self.halfDim > bb.center[1] + bb.halfDim:  # bb below bounding box (self)
             return False
-        if self.center[1] + self.halfDim > bb.center[1] - bb.halfDim:  # bb above bounding box (self)
+        if self.center[1] + self.halfDim < bb.center[1] - bb.halfDim:  # bb above bounding box (self)
             return False
 
         return True  # if we get here, boxes intersect
