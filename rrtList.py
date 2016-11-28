@@ -134,6 +134,7 @@ def drawPath(rrt, targetPoint):
 
 
 def main():
+    start = time.time()
     random.seed()
     count = 0
     numSteps = int(sys.argv[1]) #BAD, ASSUMES VALUE PASSED
@@ -159,8 +160,8 @@ def main():
             count += 1
         newPoint = Endpoint(random.randint(0, width), random.randint(0, height), None)
             
-    drawPath(rrt, targetPoint)
-    
+    #drawPath(rrt, targetPoint)
+    print time.time() - start
     
 if __name__ == "__main__":
     main()
