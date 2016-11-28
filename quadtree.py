@@ -1,4 +1,5 @@
 import numpy
+from itertools import islice
 
 class quadNode(object):
     def __init__(self, center, halfDim, parent = None):
@@ -61,10 +62,15 @@ class quadNode(object):
     #    return None  # return None if the point is not in this node
     def getPointsAABB(self, AABB):
         """returns a list of all points in quadtree that are also in AABB"""
+        points = []
         if not self.area.intersectsAABB(AABB):  # two bounding boxes don't intersect. Return False
-            return []
+            return points
 
-        points = self.pointList
+
+        for p in islice(self.pointList, 0, None):
+            if AABB.intersectsPoint(p.coords):
+                points.append(p)
+
         if self.topLeft is None:
             return points  # if node has no children, return node's points
 
