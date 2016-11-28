@@ -115,10 +115,13 @@ def drawPath(rrt, targetPoint):
     pointList = rrt.quadTree.getPointsAABB(searchArea)  # get all points in quadtree
 
     # initialize the matplotlib graph
+    plt.ion()
+    plt.show()
+
     fig = plt.figure()
-    rrt.ax = fig.add_subplot(111)
-    rrt.ax.set_xlim(-1, rrt.width + 1)
-    rrt.ax.set_ylim(-1, rrt.height + 1)
+    ax = fig.add_subplot(111)
+    ax.set_xlim(-1, rrt.width + 1)
+    ax.set_ylim(-1, rrt.height + 1)
 
     tempPoint = pointList[-1]
     plottedPoints = []
@@ -152,20 +155,54 @@ def main():
     numSteps = int(sys.argv[1])  # BAD, ASSUMES VALUE PASSED
     width = 100
     height = 100
+
+    # initialize the matplotlib graph
+    plt.ion()
+    plt.show()
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_xlim(-1, width + 1)
+    ax.set_ylim(-1, height + 1)
+
+    #searchArea = AABB((rrt.width / 2, rrt.height / 2), max(rrt.width, rrt.height) / 2)
+    #pointList = rrt.quadTree.getPointsAABB(searchArea)  # get all points in quadtree
+
+
+
+
     rrt = RRT(50, 50, width, height)
+
+    for p in islice(rrt.quadTree.pointList, None):
+        if p.prevPoint is not None:
+            epA = p
+            epB = epA.prevPoint
+            line = LineString([Point(epA.coords), Point(epB.coords)])
+
+            x, y = line.xy
+            ax.plot(x, y, color="blue")
+            plt.pause(0.001)
+
+
     count = 2
     newPoint = (random.randint(0, width), random.randint(0, height))
     targetPoint = Endpoint(80, 40, None)
 
-
     while count < numSteps:
         # while newPoint.splitCoords() != targetPoint.splitCoords():
-        if rrt.closestPoint(newPoint):
+        tempPoint = rrt.closestPoint(newPoint)
+        if tempPoint:
             count += 1
+            line = LineString([Point(tempPoint.coords), Point(tempPoint.prevPoint.coords)])
+            x, y = line.xy
+            ax.plot(x, y, color="blue")
+            plt.pause(0.001)
         newPoint = (random.randint(0, width), random.randint(0, height))
 
-    drawPath(rrt, targetPoint)
+    #drawPath(rrt, targetPoint)
 
+    plt.ioff()
+    plt.show()
 
 if __name__ == "__main__":
     main()
