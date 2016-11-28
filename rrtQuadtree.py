@@ -5,6 +5,8 @@ from itertools import islice
 import sys
 from quadtree import quadNode, AABB
 import math
+import time
+import cProfile
 
 class RRT(object):
     def __init__(self, startX, startY, gridW, gridH):
@@ -25,7 +27,7 @@ class RRT(object):
 
     def addPoint(self, point):
         self.quadTree.addPoint(point)
-        self.coordsSet.add(point)
+        self.coordsSet.add(point.coords)
 
     def sqDist(self, pointA, pointB):
         """returns squared distance between points. Allows comparison of dist for two
@@ -151,19 +153,20 @@ def drawPath(rrt, targetPoint):
 
 
 def main():
+    start = time.time()
     random.seed()
     numSteps = int(sys.argv[1])  # BAD, ASSUMES VALUE PASSED
-    width = 100
-    height = 100
+    width = 400
+    height = 400
 
     # initialize the matplotlib graph
-    plt.ion()
-    plt.show()
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.set_xlim(-1, width + 1)
-    ax.set_ylim(-1, height + 1)
+    #plt.ion()
+    #plt.show()
+#
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111)
+    #ax.set_xlim(-1, width + 1)
+    #ax.set_ylim(-1, height + 1)
 
     #searchArea = AABB((rrt.width / 2, rrt.height / 2), max(rrt.width, rrt.height) / 2)
     #pointList = rrt.quadTree.getPointsAABB(searchArea)  # get all points in quadtree
@@ -173,15 +176,15 @@ def main():
 
     rrt = RRT(50, 50, width, height)
 
-    for p in islice(rrt.quadTree.pointList, None):
-        if p.prevPoint is not None:
-            epA = p
-            epB = epA.prevPoint
-            line = LineString([Point(epA.coords), Point(epB.coords)])
-
-            x, y = line.xy
-            ax.plot(x, y, color="blue")
-            plt.pause(0.001)
+    #for p in islice(rrt.quadTree.pointList, None):
+    #    if p.prevPoint is not None:
+    #        epA = p
+    #        epB = epA.prevPoint
+    #        line = LineString([Point(epA.coords), Point(epB.coords)])
+#
+    #        x, y = line.xy
+    #        ax.plot(x, y, color="blue")
+    #        plt.pause(0.001)
 
 
     count = 2
@@ -193,16 +196,17 @@ def main():
         tempPoint = rrt.closestPoint(newPoint)
         if tempPoint:
             count += 1
-            line = LineString([Point(tempPoint.coords), Point(tempPoint.prevPoint.coords)])
-            x, y = line.xy
-            ax.plot(x, y, color="blue")
-            plt.pause(0.001)
+            #line = LineString([Point(tempPoint.coords), Point(tempPoint.prevPoint.coords)])
+            #x, y = line.xy
+            #ax.plot(x, y, color="blue")
+            #plt.pause(0.001)
         newPoint = (random.randint(0, width), random.randint(0, height))
 
     #drawPath(rrt, targetPoint)
 
-    plt.ioff()
-    plt.show()
+    #plt.ioff()
+    #plt.show()
+    print time.time() - start
 
 if __name__ == "__main__":
-    main()
+    cProfile.run('main()')
