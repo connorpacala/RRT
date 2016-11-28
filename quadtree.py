@@ -7,17 +7,20 @@ class quadNode(object):
         self.area = AABB(center, halfDim)
         self.pointList = []
         self.parent = parent
-        self.topLeft, self.topRight, self.bottomLeft, self.bottomRight = None
+        self.topLeft = None
+        self.topRight = None
+        self.bottomLeft = None
+        self.bottomRight = None
 
     def addPoint(self, point):
         """Adds point to Quadtree, creating new nodes as needed."""
         # check if point intersects bounding box
-        if not self.area.intersectsPoint(point):
+        if not self.area.intersectsPoint(point.coords):
             return False
 
         # if node has children, try to add point to children.
         if self.topLeft is not None:
-            childNode = self.getPointNode(point)
+            childNode = self.getPointNode(point.coords)
             return childNode.addPoint(point)
 
         # if space in node, add point to pointlist
@@ -26,15 +29,17 @@ class quadNode(object):
             return True
 
         # node is at capacity, create children and try to add point to children
-        offset = self.area.halfDim / 2
+        offset = self.area.halfDim / 2.0
         x = self.area.center[0]
         y = self.area.center[1]
-        self.topLeft = quadNode((x - offset, y + offset), offset)
-        self.topRight = quadNode((x + offset, y + offset), offset)
-        self.bottomLeft = quadNode((x - offset, y - offset), offset)
-        self.bottomRight = quadNode((x + offset, y - offset), offset)
+        self.topLeft = quadNode((x - offset, y + offset), offset, self)
+        self.topRight = quadNode((x + offset, y + offset), offset, self)
+        self.bottomLeft = quadNode((x - offset, y - offset), offset, self)
+        self.bottomRight = quadNode((x + offset, y - offset), offset, self)
 
-        childNode = self.getPointNode(point)  # get the child node to add the point to
+        childNode = self.getPointNode(point.coords)  # get the child node to add the point to
+        if childNode is None:
+            return False
         return childNode.addPoint(point)   # returns true if point added, false if point not added
 
     #def addPointChildren(self, point):
@@ -54,6 +59,22 @@ class quadNode(object):
     #    if self.area.intersectsPoint(point):  # Point is part of this node
     #        return self.getChildDir(point)  # returns correct child node or self if node has no children
     #    return None  # return None if the point is not in this node
+    def getPointsAABB(self, AABB):
+        """returns a list of all points in quadtree that are also in AABB"""
+        if not self.area.intersectsAABB(AABB):  # two bounding boxes don't intersect. Return False
+            return None
+
+        points = self.pointList
+        if self.topLeft is None:
+            return points  # if node has no children, return node's points
+
+        # append any points from child nodes to points and return all points
+        points.extend(self.topLeft.getPointsAABB(AABB))
+        points.extend(self.topRight.getPointsAABB(AABB))
+        points.extend(self.bottomLeftLeft.getPointsAABB(AABB))
+        points.extend(self.bottomRight.getPointsAABB(AABB))
+
+        return points
 
     def getPointNode(self, point):
         """Get the correct child of node that contains passed point. Returns child node or self if node has no
