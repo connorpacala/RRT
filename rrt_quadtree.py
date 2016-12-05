@@ -8,6 +8,9 @@ import math
 import time
 import cProfile
 
+fig = plt.figure()
+ax = fig.add_subplot(111)
+
 
 def sq_dist(point_a, point_b):
     """returns squared distance between points. Allows comparison of dist for two
@@ -17,42 +20,74 @@ def sq_dist(point_a, point_b):
 
 
 class RRT(object):
-    def __init__(self, start_x, start_y, grid_w, grid_h):
+    def __init__(self, start_x, start_y, grid_w, grid_h, max_dist):
         """Initialize the grid and first two points in the RRT"""
-        self.coordsSet = set()  # hashtable of already added points (greatly improves runtime)
+        self.coords_set = set()  # hashtable of already added points (greatly improves runtime)
+
+        self.max_dist = max_dist  # maximum distance between points. smaller = more memory but faster runtime
 
         self.width = grid_w
         self.height = grid_h
 
         # initialize quadtree to middle of space
-        self.quadTree = QuadNode((self.width / 2, self.height / 2), max(self.width, self.height) / 2)
+        self.quad_tree = QuadNode((self.width / 2, self.height / 2), max(self.width, self.height) / 2)
 
         # add the start point and the first connecting endpoint to the tree
         start_point = Endpoint(self.width / 2, self.height / 2, None)
         self.add_point(start_point)
-        curr_point = Endpoint(random.randint(0, self.width), random.randint(0, self.height), start_point)
-        self.add_point(curr_point)
+        curr_point = Endpoint(random.random() * self.width, random.random() * self.height, start_point)
+        self.add_line(curr_point)
 
     def add_point(self, point):
-        self.quadTree.add_point(point)
-        self.coordsSet.add(point.coords)
+        """Add points to quadtree and hashtable"""
+        self.quad_tree.add_point(point)
+        self.coords_set.add(point.coords)
+
+    def add_line(self, point):
+        """split line between point and point.prevPoint into segments of max_dist length and add them to the tree"""
+        #BAD, MIXING IN ANIMATION CODE TO GET ANIMATING IN REAL TIME
+        line = LineString([Point(point.coords), Point(point.prevPoint.coords)])
+        x, y = line.xy
+        ax.plot(x, y, color="blue")
+
+        # add the start and endpoints to the tree before adding midpoints
+        self.add_point(point)
+        self.add_point(point.prevPoint)
+
+        # get number of segments to split line into
+        curr_point = point
+        prev_point = point.prevPoint
+        line = LineString([Point(curr_point.coords), Point(prev_point.coords)])
+        num_segments = int(math.ceil(math.sqrt(sq_dist(curr_point.coords, prev_point.coords)) / self.max_dist))
+
+        # use interpolate to find points max_dist along line
+        for i in range(1, num_segments):
+            s_point = line.interpolate(i * self.max_dist)
+            new_point = Endpoint(s_point.x, s_point.y, prev_point)
+            curr_point.prevPoint = new_point
+            curr_point = new_point
+            self.add_point(new_point)
 
     def closest_point(self, point):
         """calculate the closest point on the tree to the passed point and add a segment between
         the passed point and the calculated point. returns none if the point already exists in the tree
         """
-        if point in self.coordsSet:
+        if point in self.coords_set:
             return None
 
         # find the node the point belongs to
-        curr_node = self.quadTree.get_point_node(point)
-        if not curr_node:
+        curr_node = self.quad_tree.get_point_node(point)
+        if curr_node is None:
             return None
 
         closest_point = None
         # search current node for points
         if len(curr_node.pointList) > 0:
-            closest_point = curr_node.pointList[0]
+            for p in curr_node.pointList:
+                # only use points that are not start point (causes bug when creating line as prevPoint is None)
+                if p.prevPoint is not None:
+                    closest_point = p
+                    break
         else:  # search sibling nodes for points
             parent_node = curr_node.parent
             if curr_node is not parent_node.topLeft and len(parent_node.topLeft.pointList) > 0:
@@ -64,26 +99,46 @@ class RRT(object):
             elif curr_node is not parent_node.bottomRight and len(parent_node.bottomRight.pointList) > 0:
                 closest_point = parent_node.bottomRight.pointList[0]
 
-        if closest_point is None:
+        if closest_point is None:  # something went wrong, there should be a point in the node or its siblings
             return None
 
-        min_dist = sq_dist(closest_point.coords, point)
-        bb_size = math.sqrt(min_dist)  # calculate actual distance for AABB creation
-        search_aabb = AABB(point, bb_size)  # create bounding box centered on point with dimensions bb_size * 2
+        # find the closest point on the line to the passed point
+        line = LineString([Point(closest_point.coords), Point(closest_point.prevPoint.coords)])
+        temp_point = line.interpolate(line.project(Point(point)))
+        closest_coords = (temp_point.x, temp_point.y)
 
-        points = self.quadTree.get_points_aabb(search_aabb)  # find all points in tree that are within bounding box
+        min_dist = sq_dist(closest_coords, point)
+
+        # calculate bb_size to guarantee finding closest line segment based on max_dist between points
+        bb_size = math.sqrt(self.max_dist ** 2 + min_dist ** 2)
+        search_aabb = AABB(point, bb_size)  # create bounding box centered on point with dimensions bb_size * 2
+        points = self.quad_tree.get_points_aabb(search_aabb)  # find all points in tree that are within bounding box
 
         if points:
             # find the closest point to the target point
             for p in islice(points, 0, None):
-                temp_dist = sq_dist(p.coords, point)
-                if temp_dist < min_dist:
-                    min_dist = temp_dist
-                    closest_point = p
+                if p.prevPoint is not None:  # ignore start point
+                    line = LineString([Point(p.coords), Point(p.prevPoint.coords)])
+                    temp_point = line.interpolate(line.project(Point(point)))
+                    temp_dist = sq_dist((temp_point.x, temp_point.y), point)
 
-        new_point = Endpoint(point[0], point[1], closest_point)
-        self.add_point(new_point)
-        return new_point
+                    if temp_dist < min_dist:
+                        min_dist = temp_dist
+                        closest_coords = (temp_point.x, temp_point.y)
+                        closest_point = p
+        else:
+            return None
+
+        if closest_coords not in self.coords_set:  # if interpolated point is not an endpoint, add new orthogonal line
+            new_end = Endpoint(closest_coords[0], closest_coords[1], closest_point.prevPoint)
+            closest_point.prevPoint = new_end
+            new_point = Endpoint(point[0], point[1], new_end)
+            self.add_line(new_point)
+            return new_point
+        else:  # interpolated point is endpoint, connect to existing endpoint
+            new_point = Endpoint(point[0], point[1], closest_point)
+            self.add_line(new_point)
+            return new_point
 
 
 class Endpoint(object):
@@ -95,96 +150,34 @@ class Endpoint(object):
         return self.coords.x, self.coords.y
 
 
-def draw_plot(rrt):
-    """draw the RRT"""
-    # initialize the matplotlib graph
-    fig = plt.figure()
-    rrt.ax = fig.add_subplot(111)
-    rrt.ax.set_xlim(-1, rrt.width + 1)
-    rrt.ax.set_ylim(-1, rrt.height + 1)
-
-    for p in islice(rrt.pointList, 1, None):
-        ep_a = p
-        ep_b = ep_a.prevPoint
-        line = LineString([Point(ep_a.coords), Point(ep_b.coords)])
-
-        x, y = line.xy
-        rrt.ax.plot(x, y, color="blue")
-
-    plt.show()
-
-
-def draw_path(rrt, target_point):
-    """draw the RRT with a path from the startPoint to the passed target_point"""
-    search_area = AABB((rrt.width / 2, rrt.height / 2), max(rrt.width, rrt.height) / 2)
-    point_list = rrt.quadTree.get_points_aabb(search_area)  # get all points in quadtree
+def main():
+    start = time.time()
+    random.seed()
+    num_steps = int(sys.argv[1])  # BAD, ASSUMES VALUE PASSED
+    width = 10
+    height = 10
 
     # initialize the matplotlib graph
     plt.ion()
     plt.show()
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.set_xlim(-1, rrt.width + 1)
-    ax.set_ylim(-1, rrt.height + 1)
+    ax.set_xlim(-1, width + 1)
+    ax.set_ylim(-1, height + 1)
 
-    temp_point = point_list[-1]
-    plotted_points = []
-    # start at target_point and work backwards until starting point found.
-    while temp_point.prevPoint is not None:
-        plotted_points.append(temp_point)
-        ep_a = temp_point
-        ep_b = ep_a.prevPoint
-        line = LineString([Point(ep_a.coords), Point(ep_b.coords)])
+    rrt = RRT(50, 50, width, height, 1)
 
-        # draw each line in red
-        x, y = line.xy
-        rrt.ax.plot(x, y, color="red")
-
-        temp_point = temp_point.prevPoint
-
-    for p in islice(point_list, None):
-        if p not in plotted_points and p.prevPoint is not None:
-            ep_a = p
-            ep_b = ep_a.prevPoint
-            line = LineString([Point(ep_a.coords), Point(ep_b.coords)])
+    for p in islice(rrt.quad_tree.pointList, None):
+        if p.prevPoint is not None:
+            epA = p
+            epB = epA.prevPoint
+            line = LineString([Point(epA.coords), Point(epB.coords)])
 
             x, y = line.xy
-            rrt.ax.plot(x, y, color="blue")
-
-    plt.show()
-
-
-def main():
-    start = time.time()
-    random.seed()
-    num_steps = int(sys.argv[1])  # BAD, ASSUMES VALUE PASSED
-    width = 400
-    height = 400
-
-    # initialize the matplotlib graph
-    #plt.ion()
-    #plt.show()
-#
-    #fig = plt.figure()
-    #ax = fig.add_subplot(111)
-    #ax.set_xlim(-1, width + 1)
-    #ax.set_ylim(-1, height + 1)
-
-    rrt = RRT(50, 50, width, height)
-
-    #for p in islice(rrt.quadTree.pointList, None):
-    #    if p.prevPoint is not None:
-    #        epA = p
-    #        epB = epA.prevPoint
-    #        line = LineString([Point(epA.coords), Point(epB.coords)])
-#
-    #        x, y = line.xy
-    #        ax.plot(x, y, color="blue")
-    #        plt.pause(0.001)
+            ax.plot(x, y, color="blue")
+            plt.pause(0.001)
 
     count = 2
-    new_point = (random.randint(0, width), random.randint(0, height))
+    new_point = (random.random() * width, random.random() * height)
     target_point = Endpoint(80, 40, None)
 
     while count < num_steps:
@@ -195,14 +188,15 @@ def main():
             #line = LineString([Point(temp_point.coords), Point(temp_point.prevPoint.coords)])
             #x, y = line.xy
             #ax.plot(x, y, color="blue")
-            #plt.pause(0.001)
-        new_point = (random.randint(0, width), random.randint(0, height))
+            plt.pause(0.001)
+        new_point = (random.random() * width, random.random() * height)
 
     #draw_path(rrt, target_point)
 
-    #plt.ioff()
-    #plt.show()
+    plt.ioff()
+    plt.show()
     print time.time() - start
 
 if __name__ == "__main__":
-    cProfile.run('main()')
+    #cProfile.run('main()')
+    main()
