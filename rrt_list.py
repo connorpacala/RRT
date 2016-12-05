@@ -4,6 +4,7 @@ import random
 from itertools import islice
 import sys
 import time
+import cProfile
 
 
 def sq_dist(point_a, point_b):
@@ -36,14 +37,14 @@ class RRT(object):
         """
         if (point.split_coords()) in self.coordsSet:
             return None
-        dist = self.sq_dist(self.pointList[0].coords, point.coords)
+        dist = sq_dist(self.pointList[0].coords, point.coords)
         closest_end = self.pointList[0]
         intersect = None
         for p in islice(self.pointList, 1, None):   # ignore first point as it has no prevPoint
             # find the closest point on the line to the passed point
             line = LineString([p.coords, p.prevPoint.coords])
             temp_point = line.interpolate(line.project(point.coords))
-            temp_dist = self.sq_dist(temp_point, point.coords)
+            temp_dist = sq_dist(temp_point, point.coords)
             if temp_dist < dist:
                 dist = temp_dist
                 closest_end = p
@@ -147,11 +148,11 @@ def main():
     """
     startPoint = Endpoint(width / 2, height / 2, None)
     rrt.pointList.append(startPoint)
-    rrt.coordsSet.add((startPoint.split_coords()))
+    rrt.coords_set.add((startPoint.split_coords()))
     count += 1
     new_point = Endpoint(random.randint(0, width), random.randint(0, height), startPoint)
     rrt.pointList.append(new_point)
-    rrt.coordsSet.add((new_point.split_coords()))
+    rrt.coords_set.add((new_point.split_coords()))
     count += 1
     """
 
@@ -167,4 +168,5 @@ def main():
     print time.time() - start
     
 if __name__ == "__main__":
-    main()
+    cProfile.run('main()')
+    # main()
