@@ -5,7 +5,7 @@ from itertools import islice
 class QuadNode(object):
     def __init__(self, center, half_dim, parent=None):
         """Initialize the QuadNode with center tuple (x, y) and half_dim being 1/2 of side length"""
-        self.NODE_CAPACITY = 4
+        self.NODE_CAPACITY = 8
         self.area = AABB(center, half_dim)
         self.pointList = []
         self.parent = parent
@@ -23,6 +23,8 @@ class QuadNode(object):
         # if node has children, try to add point to children.
         if self.topLeft is not None:
             child_node = self.get_point_node(point.coords)
+            if child_node is None:
+                return False
             return child_node.add_point(point)
 
         # if space in node, add point to pointlist
@@ -44,23 +46,6 @@ class QuadNode(object):
             return False
         return child_node.add_point(point)   # returns true if point added, false if point not added
 
-    # def addPointChildren(self, point):
-    #    """Tries to add passed point to the node's child. Returns true if point added, false otherwise"""
-    #    if self.topLeft.add_point(point):
-    #        return True
-    #    if self.topRight.add_point(point):
-    #        return True
-    #    if self.bottomLeft.add_point(point):
-    #        return True
-    #    if self.bottomRight.add_point(point):
-    #        return True
-    #    return False
-
-    # def get_point_node(self, point):
-    #    """Returns the node that would hold the passed point"""
-    #    if self.area.intersects_point(point):  # Point is part of this node
-    #        return self.getChildDir(point)  # returns correct child node or self if node has no children
-    #    return None  # return None if the point is not in this node
     def get_points_aabb(self, aabb):
         """returns a list of all points in quadtree that are also in aabb"""
         points = []
